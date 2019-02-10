@@ -77,6 +77,58 @@ public class Controller implements Initializable, ChatUtilizer {
     private static boolean shakeFlagX;
     private static boolean shakeFlagY;
 
+    private static FileWriter fileOut;
+    private static FileReader fileIn;
+    static final String PATH = "chat.log";
+
+    private boolean readChatLog() throws IOException{
+        fileIn = new FileReader(nickname + "/"+PATH);
+
+        File file = new File(nickname+"/"+PATH);
+        if (!file.exists()) {
+            return false;
+        } else {
+            BufferedReader buf = new BufferedReader(fileIn);
+            String currentStr;
+
+            while ((currentStr=buf.readLine())!=null){
+                String[] parts = currentStr.split(SEPARATOR, 3);
+
+                // "Not on FX application thread"
+                Platform.runLater(() -> {
+                    stickMessage(parts[PROT_NICK_FROM].equals(nickname), parts[PROT_COLOR], parts[PROT_NICK_FROM], parts[PROT_MSG_BODY]);
+                });
+
+            }
+            buf.close();
+
+        }
+        fileIn.close();
+        return true;
+
+    }
+
+    private void writeChatLog(String message) throws IOException{
+        fileOut = new FileWriter(nickname+"/"+PATH,true);
+
+        File file = new File(nickname+ "/");
+
+        if (!file.exists()) {
+            file.mkdir();
+        }
+        file = new File (nickname+"/"+PATH);
+        if (!file.exists()) {
+            file.createNewFile();
+        }
+        BufferedWriter bw = new BufferedWriter(fileOut);
+
+        bw.newLine();
+        bw.write(message );
+        bw.close();
+
+    }
+
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         mainFrame.setOnMousePressed(new EventHandler<MouseEvent>() {
@@ -151,6 +203,7 @@ public class Controller implements Initializable, ChatUtilizer {
                 String[] parts = reply.split(SEPARATOR);
                 nickname = parts[PROT_MY_NICK];
                 setAuthorized(true);
+//                readChatLog();
                 break;
             } else if (reply.startsWith(PROT_CMD_PREFIX)) {
                 commandProcessor(reply);
@@ -185,6 +238,7 @@ public class Controller implements Initializable, ChatUtilizer {
                 commandProcessor(message);
             } else {
                 String[] parts = message.split(SEPARATOR, 3);
+                writeChatLog(message);
 
                 // "Not on FX application thread"
                 Platform.runLater(() -> {
@@ -260,6 +314,7 @@ public class Controller implements Initializable, ChatUtilizer {
                         // Цикл авторизации
                         Controller.this.nickname = authenticationLoop();
                         // Цикл работы в чате
+                        readChatLog();
                         conversationLoop();
                     } catch (IOException e) {
                         System.out.println("Connection closed");
